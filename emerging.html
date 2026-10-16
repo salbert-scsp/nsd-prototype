@@ -4,6 +4,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="assets/nsd.css">
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
 <!-- workforce-data:start (written by public_data/build_prototype_data.py; do not edit) -->
@@ -188,4 +190,5 @@ new MutationObserver(repaint).observe(document.documentElement, { attributes: tr
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(repaint);
 startPage(render);
 </script>
+<script>document.body.insertAdjacentHTML("afterbegin",'<div class="proto-banner" role="note"><p>Prototype for internal review: not for citation. Panels marked Sample use invented numbers.</p></div>');</script>
 </body></html>
