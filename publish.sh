@@ -11,7 +11,7 @@ for f in $FILES; do [ -f "$SRC/$f" ] || { echo "Missing $SRC/$f" >&2; exit 1; };
 mkdir -p assets
 for f in $FILES; do cp "$SRC/$f" "$f"; done
 python3 apply_site_overrides.py                  # re-apply noindex and the banner, which the copy just overwrote
-git add index.html publish.sh apply_site_overrides.py robots.txt assets/site.css $FILES   # only the site files, never anything else
+git add index.html publish.sh apply_site_overrides.py robots.txt $FILES   # only the site files, never anything else
 if git diff --cached --quiet; then echo "Nothing changed; nothing to publish."; exit 0; fi
 git commit -m "$1"
 git push origin HEAD:main
