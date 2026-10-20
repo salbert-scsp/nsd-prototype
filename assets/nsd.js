@@ -169,7 +169,7 @@ function mountShell(cfg) {
     <nav class="mast__nav" aria-label="Dashboard sections">${TABS.map((t) => `<a href="${t.href}" data-tab="${t.id}"${t.id === cfg.page ? ' aria-current="page"' : ""}>${esc(t.label)}</a>`).join("")}</nav></div></header>
   <main class="layout">
     <aside class="rail" aria-label="Choose what to look at">
-      <div id="s1"></div><div id="feat"></div><div id="reset"></div>
+      <div id="s1"></div><div id="reset"></div>
       <h1 class="headline-b" id="headline"></h1>
       <p class="payline" id="subline"></p>
       <p class="context" id="context"></p>
@@ -187,7 +187,7 @@ function mountShell(cfg) {
   <div class="tip" id="tip" hidden></div>
   <div id="live" class="sr" role="status" aria-live="polite"></div>
   <p id="kb-help" class="sr">Use the arrow keys to move between values, Home and End to jump, Page Up and Page Down to skip ten, Enter to pick one where that is offered, and Escape to close the tooltip.</p>`);
-  mountSearch($("s1"), "Find any occupation or group"); mountFeatured($("feat")); mountReset($("reset"));
+  mountSearch($("s1"), "Find any occupation or group"); mountReset($("reset"));   // the Featured chips were removed from the page; fields stay reachable through search
 }
 /* A closed section with one plain source line at its end. Returns { body, setSummary }. */
 function addSection(title, summary) {

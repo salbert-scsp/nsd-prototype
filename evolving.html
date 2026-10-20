@@ -160,7 +160,7 @@ const SAMPLE_SKILLS = {
   finance: [["Data analytics / Python", [6, 7, 9, 11, 14, 17, 20]], ["ERP systems", [22, 24, 25, 27, 28, 29, 30]], ["Manual data entry", [18, 17, 15, 13, 11, 10, 8]]],
 };
 const coming = addComing("Skill density over time for the featured fields; needs NLx job postings");
-coming.body.innerHTML = `<h3>Skill density over time</h3><p>Share of a field’s job postings that ask for each skill, by year. These lines are invented to show the layout; real ones need NLx data. Choose a featured field to see them.</p><div id="sd-key"></div><div class="chart" id="sd-chart"></div>`;
+coming.body.innerHTML = `<h3>Skill density over time</h3><p>Share of a field’s job postings that ask for each skill, by year. These lines are invented to show the layout; real ones need NLx data. Search for a field such as Software engineering to see them.</p><div id="sd-key"></div><div class="chart" id="sd-chart"></div>`;
 function drawSkillDensity(w) {
   const box = $("sd-chart"); box.innerHTML = ""; box.hidden = !(current && current.type === "featured"); if (box.hidden) return;   // an empty chart is not a tab stop
   box.style.setProperty("--f", "var(--mark)");
