@@ -257,3 +257,10 @@ details.coming .body { padding: 4px 16px 24px; }
 
 /* grid children may shrink below their content, so a wide table scrolls inside its own box instead of stretching the page */
 .main > *, .body > *, .rail > * { min-width: 0; }
+
+/* the way back to all occupations */
+.reset-btn { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 4px 0; font: inherit; font-size: 15px; font-weight: 600; color: var(--mark); cursor: pointer; text-align: left; }
+.reset-btn[hidden] { display: none; }
+.reset-btn > span[aria-hidden] { font-size: 20px; line-height: 1; }
+.reset-btn:hover .reset-btn__t { text-decoration: underline; }
+.reset-btn:focus-visible { outline: 2px solid var(--mark); outline-offset: 2px; border-radius: 3px; }

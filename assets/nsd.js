@@ -149,9 +149,16 @@ function mountSearch(root, label) {
 function mountFeatured(root) {
   root.className = "chips"; root.setAttribute("role", "group"); root.setAttribute("aria-label", "Featured fields");
   root.innerHTML = `<span class="chips__t">Featured</span>` + FEAT.map((f) => `<button type="button" class="chip-btn" data-k="${f.key}" aria-pressed="false">${esc(f.name)}</button>`).join("");
-  root.addEventListener("click", (ev) => { const b = ev.target.closest("[data-k]"); if (b) setSel({ type: "featured", id: b.dataset.k }); });
+  // a second click on the selected field goes back to all occupations
+  root.addEventListener("click", (ev) => { const b = ev.target.closest("[data-k]"); if (b) setSel(sel.type === "featured" && sel.id === b.dataset.k ? { type: "all", id: "" } : { type: "featured", id: b.dataset.k }); });
 }
 const syncFeatured = () => document.querySelectorAll(".chip-btn").forEach((b) => b.setAttribute("aria-pressed", sel.type === "featured" && sel.id === b.dataset.k));
+/* One visible way back: shown whenever a group, field or occupation is selected. */
+function mountReset(root) {
+  root.innerHTML = `<button type="button" class="reset-btn" hidden><span aria-hidden="true">×</span> <span class="reset-btn__t"></span></button>`;
+  root.querySelector("button").addEventListener("click", () => { setSel({ type: "all", id: "" }); $("q-s1")?.focus(); });
+}
+const syncReset = () => { const b = document.querySelector(".reset-btn"); if (!b) return; b.hidden = sel.type === "all"; b.querySelector(".reset-btn__t").textContent = sel.type === "all" ? "" : `Clear “${entityOf(sel).short}” and show all occupations`; };
 
 /* ---------- the same page on every tab ---------- */
 const TABS = [{ id: "emerging", href: "emerging.html", label: "Emerging titles & skills" }, { id: "evolving", href: "evolving.html", label: "Evolving occupations" }, { id: "exposure", href: "exposure.html", label: "Exposure & transitions" }];
@@ -162,7 +169,7 @@ function mountShell(cfg) {
     <nav class="mast__nav" aria-label="Dashboard sections">${TABS.map((t) => `<a href="${t.href}" data-tab="${t.id}"${t.id === cfg.page ? ' aria-current="page"' : ""}>${esc(t.label)}</a>`).join("")}</nav></div></header>
   <main class="layout">
     <aside class="rail" aria-label="Choose what to look at">
-      <div id="s1"></div><div id="feat"></div>
+      <div id="s1"></div><div id="feat"></div><div id="reset"></div>
       <h1 class="headline-b" id="headline"></h1>
       <p class="payline" id="subline"></p>
       <p class="context" id="context"></p>
@@ -180,7 +187,7 @@ function mountShell(cfg) {
   <div class="tip" id="tip" hidden></div>
   <div id="live" class="sr" role="status" aria-live="polite"></div>
   <p id="kb-help" class="sr">Use the arrow keys to move between values, Home and End to jump, Page Up and Page Down to skip ten, Enter to pick one where that is offered, and Escape to close the tooltip.</p>`);
-  mountSearch($("s1"), "Find any occupation or group"); mountFeatured($("feat"));
+  mountSearch($("s1"), "Find any occupation or group"); mountFeatured($("feat")); mountReset($("reset"));
 }
 /* A closed section with one plain source line at its end. Returns { body, setSummary }. */
 function addSection(title, summary) {
@@ -209,7 +216,7 @@ function renderRank(rows, e) {
   }).join("");
 }
 function wireRank() {
-  $("rank").addEventListener("click", (ev) => { const b = ev.target.closest(".rk"); if (b) { setSel({ type: "group", id: b.dataset.g }); document.querySelector(`.rk[data-g="${b.dataset.g}"]`)?.focus(); } });
+  $("rank").addEventListener("click", (ev) => { const b = ev.target.closest(".rk"); if (b) { setSel(sel.type === "group" && sel.id === b.dataset.g ? { type: "all", id: "" } : { type: "group", id: b.dataset.g }); document.querySelector(`.rk[data-g="${b.dataset.g}"]`)?.focus(); } });
 }
 /* A sortable table. cols: [{ k, label, num, val(row) for sorting, html(row) for the cell }]; the first column holds the occupation button. */
 function dataTable(box, spec) {
@@ -233,7 +240,7 @@ function dataTable(box, spec) {
 const pickBtn = (o) => `<button type="button" class="linkish" data-pick="${o.soc}">${esc(o.t)}</button><div class="soc">${o.soc}${o.own19 ? "" : ' · <span class="dag">† no 2019 figure</span>'}</div>`;
 /* Start a page: wire the selection, then render once. */
 function startPage(render) {
-  onSelect = (e) => { syncTabs(); syncFeatured(); render(e); };
+  onSelect = (e) => { syncTabs(); syncFeatured(); syncReset(); render(e); };
   addEventListener("hashchange", () => { const s = selFromHash(); if (hashOf(s) !== hashOf(sel)) { sel = s; onSelect(entityOf(s)); } });
   sel = selFromHash(); onSelect(entityOf(sel));
 }
