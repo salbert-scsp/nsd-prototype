@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Copy the five prototype files from prototype-view, re-apply the site-only changes (noindex, banner),
-# commit with the message you pass, and push.
+# Copy the five prototype files from prototype-scsp-view, re-apply the site-only changes (noindex),
+# (previous/ is an archive and is never touched here), commit with the message you pass, and push.
 # Usage: ./publish.sh "Commit message"
 set -euo pipefail
 [ $# -ge 1 ] && [ -n "$1" ] || { echo "Usage: $0 \"commit message\"" >&2; exit 1; }
-SRC="${NSD_SRC:-$HOME/Documents/SkillsDashboard/prototype-view/prototype}"
+SRC="${NSD_SRC:-$HOME/Documents/SkillsDashboard/prototype-scsp-view/prototype}"
 cd "$(dirname "$0")"
-FILES="evolving.html emerging.html exposure.html assets/nsd.css assets/nsd.js"
+FILES="evolving.html emerging.html exposure.html assets/nsd.css assets/nsd.js assets/scsp-logo.png"
 for f in $FILES; do [ -f "$SRC/$f" ] || { echo "Missing $SRC/$f" >&2; exit 1; }; done
 mkdir -p assets
 for f in $FILES; do cp "$SRC/$f" "$f"; done

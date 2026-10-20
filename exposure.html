@@ -2,7 +2,7 @@
 <title>Exposure &amp; transitions | National Skills Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="assets/nsd.css">
 <meta name="robots" content="noindex, nofollow">
 </head>
@@ -61,6 +61,14 @@ function methodNote() {
 /* ---------- the rank list: groups by average exposure percentile, weighted by jobs ---------- */
 const ORDER = GROUPS.filter((g) => GST[g.code].w !== null).sort((a, b) => GST[b.code].w - GST[a.code].w);
 const rankRows = () => ORDER.map((g) => { const s = GST[g.code]; return { code: g.code, name: short(g), val: String(Math.round(s.w)), label: `average exposure percentile ${Math.round(s.w)}`, bar: { mode: "lin", v: s.w, max: 100 }, bench: ALL_W, sub: s.cornerJobs ? `${fmtM(s.cornerJobs)} workers in the corner` : "" }; });
+/* The plain-language panel under the selected group: scores, counts and corner workers come from GST, the same rounding as the row. */
+setExplain((code) => {
+  const s = GST[code], nm = esc(short(GBY[code])), hi = OCC.filter((o) => o.g === code && o.exp !== null && o.exp >= HIGH).length, sc = s.scored === s.m ? "" : "scored ";
+  const count = s.scored === 1 ? `Its one ${sc}occupation ${hi ? "scores" : "does not score"} ${N(HIGH)} or higher.` : hi === 0 ? `None of its ${N(s.scored)} ${sc}occupations score ${N(HIGH)} or higher.` : hi === s.scored ? `All ${N(s.scored)} of its ${sc}occupations score ${N(HIGH)} or higher.` : `${N(hi)} of its ${N(s.scored)} ${sc}occupations ${hi === 1 ? "scores" : "score"} ${N(HIGH)} or higher.`;
+  return [`The average worker in ${nm} occupations has an AI overlap score of ${N(Math.round(s.w))} out of ${N(100)}, compared with ${N(Math.round(ALL_W))} for all workers.`, count,
+    ...(s.cornerJobs ? [`${N(fmtM(s.cornerJobs))} workers are in its high-overlap, below-median-pay occupations.`] : []),
+    `Overlap means AI’s abilities match much of this work. It does not mean jobs will be lost.`];
+});
 $("rank-note").textContent = `Average exposure percentile of each group’s workers (0 to 100), weighted by jobs. The dark tick marks all occupations, ${Math.round(ALL_W)}. The line under each group is the workers in the high-exposure, below-median-pay corner. Exposure is overlap with the work, not job loss. Source: ${SRC_EXPOSURE}.`;
 
 /* ---------- the chart: exposure (x) against median pay (y, log scale), every occupation with a score ---------- */

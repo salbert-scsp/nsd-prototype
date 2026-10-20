@@ -2,7 +2,7 @@
 <title>Emerging titles &amp; skills | National Skills Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="assets/nsd.css">
 <meta name="robots" content="noindex, nofollow">
 </head>
@@ -70,6 +70,15 @@ function methodNote() {
 /* ---------- the rank list: groups by the share of their occupations with a new task since 2024 ---------- */
 const ORDER = GROUPS.slice().sort((a, b) => (GSTAT[b.code].share - GSTAT[a.code].share) || (GSTAT[b.code].n - GSTAT[a.code].n) || short(a).localeCompare(short(b)));
 const rankRows = () => ORDER.map((g) => { const s = GSTAT[g.code]; return { code: g.code, name: short(g), val: Math.round(s.share * 100) + "%", label: `${Math.round(s.share * 100)} percent of occupations have a new task since ${RECENT}`, bar: { mode: "lin", v: s.share * 100, max: 100 }, bench: ALL_TOUCHED / OCC.length * 100, sub: `${plural(s.n, "task")} · ${s.k} of ${s.m} occupations` }; });
+/* The plain-language panel under the selected group: every number comes from GSTAT, TASKS and the same rounding as the row. */
+setExplain((code) => {
+  const s = GSTAT[code], nm = esc(short(GBY[code])), allPct = Math.round(ALL_TOUCHED / OCC.length * 100), share = Math.round(s.share * 100);
+  if (s.k === 0) return [s.m === 1 ? `Its one occupation had no new task recorded since ${RECENT}. That often means O*NET hasn’t re-surveyed it yet, not that nothing changed.` : `None of its ${N(s.m)} occupations had a new task recorded since ${RECENT}. That often means O*NET hasn’t re-surveyed them yet, not that nothing changed.`];
+  const drone = TASKS.filter((t) => t.g === code && isRecent(t) && isWave(t)).length, who = s.k === s.m ? (s.m === 1 ? "Its one occupation" : `All ${N(s.m)} of them`) : `${N(s.k)} of them`;
+  return [`${nm} has ${N(s.m)} ${s.m === 1 ? "occupation" : "occupations"}. ${who} (${N(share + "%")}) had at least one new task recorded by O*NET since ${RECENT}. ${s.k === 1 ? "That occupation" : `Together, those ${N(s.k)} occupations`} got ${N(s.n)} new ${s.n === 1 ? "task" : "tasks"}.`,
+    ...(drone ? [`${drone === s.n ? (s.n === 1 ? "That task" : `All ${N(drone)} of those tasks`) : `${N(drone)} of those tasks`} came from the ${monthName(WAVE_MONTH)} drone batch.`] : []),
+    `The bar shows the ${N(share + "%")}. The dark tick marks the average for all occupations (${N(allPct + "%")}).`];
+});
 $("rank-note").textContent = `Share of each group’s occupations with at least one new O*NET task since ${RECENT}; the line under each group is the task count. The dark tick marks all occupations, ${Math.round(ALL_TOUCHED / OCC.length * 100)}%. Counts reflect O*NET’s rolling update schedule (it re-surveys each occupation every few years), not the amount of change. Source: ${SRC_TASKS}; BLS OEWS occupations.`;
 
 /* ---------- the chart: tasks recorded each year, the selection against everything else ---------- */

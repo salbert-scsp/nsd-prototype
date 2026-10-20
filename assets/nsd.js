@@ -161,22 +161,39 @@ function mountReset(root) {
 const syncReset = () => { const b = document.querySelector(".reset-btn"); if (!b) return; b.hidden = sel.type === "all"; b.querySelector(".reset-btn__t").textContent = sel.type === "all" ? "" : `Clear “${entityOf(sel).short}” and show all occupations`; };
 
 /* ---------- the same page on every tab ---------- */
-const TABS = [{ id: "emerging", href: "emerging.html", label: "Emerging titles & skills" }, { id: "evolving", href: "evolving.html", label: "Evolving occupations" }, { id: "exposure", href: "exposure.html", label: "Exposure & transitions" }];
+const TABS = [{ id: "emerging", href: "emerging.html", label: "Emerging titles & skills", short: "Emerging" }, { id: "evolving", href: "evolving.html", label: "Evolving occupations", short: "Evolving" }, { id: "exposure", href: "exposure.html", label: "Exposure & transitions", short: "Exposure" }];
 const syncTabs = () => document.querySelectorAll(".mast__nav a").forEach((a) => { a.href = TABS.find((t) => t.id === a.dataset.tab).href + hashOf(sel); });   // the selection travels with you
+const EYEBROWS = { emerging: { chart: "New tasks, by year" }, evolving: { chart: "Jobs and pay, by occupation" }, exposure: { chart: "Exposure and pay, by occupation" } };
+/* Two-tone headline: the first number (with its "up" or "down") is wrapped in a mark so the stylesheet can color it. Text is untouched. */
+const KEY_NUMBER = /(?:(?:up|down) )?[−+-]?\d+(?:,\d{3})*(?:\.\d+)?%?/g, BARE_YEAR = /^(?:19|20)\d\d$/;   // a bare year is not the key number
+function markKeyNumber(root) {
+  if (root.querySelector(".hl")) return;
+  const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+    const m = [...n.nodeValue.matchAll(KEY_NUMBER)].find((x) => !BARE_YEAR.test(x[0])); if (!m) continue;
+    const span = document.createElement("span"); span.className = "hl"; span.textContent = m[0];
+    const after = n.splitText(m.index); after.nodeValue = after.nodeValue.slice(m[0].length); n.parentNode.insertBefore(span, after); return;
+  }
+}
+function mountHeadlineMark(h) {
+  const obs = new MutationObserver(() => { obs.disconnect(); markKeyNumber(h); obs.observe(h, { childList: true, characterData: true, subtree: true }); });
+  obs.observe(h, { childList: true, characterData: true, subtree: true });
+}
 function mountShell(cfg) {
+  const ey = EYEBROWS[cfg.page] || {};
   document.body.insertAdjacentHTML("afterbegin", `<header class="mast"><div class="mast__in">
-    <span class="mast__name">National Skills Dashboard</span>
-    <nav class="mast__nav" aria-label="Dashboard sections">${TABS.map((t) => `<a href="${t.href}" data-tab="${t.id}"${t.id === cfg.page ? ' aria-current="page"' : ""}>${esc(t.label)}</a>`).join("")}</nav></div></header>
+    <div class="mast__brand"><img class="mast__logo" src="assets/scsp-logo.png" width="647" height="130" alt="Special Competitive Studies Project"><span class="mast__rule" aria-hidden="true"></span><span class="mast__name">National Skills Dashboard</span></div>
+    <nav class="mast__nav" aria-label="Dashboard sections">${TABS.map((t) => `<a href="${t.href}" data-tab="${t.id}" title="${esc(t.label)}" aria-label="${esc(t.label)}"${t.id === cfg.page ? ' aria-current="page"' : ""}>${esc(t.short)}</a>`).join("")}</nav></div></header>
   <main class="layout">
     <aside class="rail" aria-label="Choose what to look at">
       <div id="s1"></div><div id="reset"></div>
       <h1 class="headline-b" id="headline"></h1>
       <p class="payline" id="subline"></p>
       <p class="context" id="context"></p>
-      <div><h2 class="rank-h">${esc(cfg.rankTitle)}</h2><div class="rank" id="rank" role="group" aria-label="${esc(cfg.rankLabel)}"></div><p class="note" id="rank-note" style="margin-top:10px"></p></div>
+      <div><p class="eyebrow">Groups of occupations</p><h2 class="rank-h">${esc(cfg.rankTitle)}</h2><div class="rank" id="rank" role="group" aria-label="${esc(cfg.rankLabel)}"></div><p class="note" id="rank-note" style="margin-top:10px"></p></div>
     </aside>
     <div class="main">
-      <figure class="plate" id="plate"><div class="chart" id="chart"></div><p class="note"><span id="chart-note"></span><span id="clip-note"></span></p></figure>
+      <figure class="plate" id="plate"><p class="eyebrow">${esc(ey.chart || "")}</p><div class="chart" id="chart"></div><p class="note"><span id="chart-note"></span><span id="clip-note"></span></p></figure>
       <p class="method" id="method" style="margin:0"></p>
       <div class="readout" id="readout" aria-live="polite"></div>
       <section aria-label="Detail" id="details"></section>
@@ -187,6 +204,7 @@ function mountShell(cfg) {
   <div class="tip" id="tip" hidden></div>
   <div id="live" class="sr" role="status" aria-live="polite"></div>
   <p id="kb-help" class="sr">Use the arrow keys to move between values, Home and End to jump, Page Up and Page Down to skip ten, Enter to pick one where that is offered, and Escape to close the tooltip.</p>`);
+  mountHeadlineMark($("headline"));
   mountSearch($("s1"), "Find any occupation or group"); mountReset($("reset"));   // the Featured chips were removed from the page; fields stay reachable through search
 }
 /* A closed section with one plain source line at its end. Returns { body, setSummary }. */
@@ -203,6 +221,10 @@ function addComing(summary) {
   $("coming").appendChild(d); return { el: d, body: d.querySelector(".body") };
 }
 const srcLine = (s) => `<p class="note">Source: ${s}</p>`;
+/* Each page may set a plain-language explanation for a selected group: setExplain((code) => [sentence, ...]). Numbers go in N() so they set in mono. */
+let explainGroup = null;
+const setExplain = (fn) => { explainGroup = fn; };
+const N = (x) => `<span class="n">${x}</span>`;
 /* The rank list is the group selector. rows: [{ code, name, val, cls, label, bar: { mode: "div" | "lin", v, max }, bench, sub }] already sorted. */
 function renderRank(rows, e) {
   $("rank").innerHTML = rows.map((r) => {
@@ -210,12 +232,18 @@ function renderRank(rows, e) {
     const w = Math.min(Math.abs(r.bar.v), r.bar.max) / r.bar.max * (r.bar.mode === "div" ? 50 : 100);
     const fill = r.bar.mode === "div" ? (r.bar.v >= 0 ? `left:50%;width:${w}%` : `right:50%;width:${w}%`) : `left:0;width:${w}%`;
     const bench = r.bench === undefined ? "" : `<b style="left:${r.bar.mode === "div" ? 50 + r.bench / r.bar.max * 50 : r.bench / r.bar.max * 100}%"></b>`;
-    return `<button type="button" class="rk" data-g="${r.code}" aria-pressed="${isSel}" ${isPar ? 'aria-current="true"' : ""}>
+    const open = isSel && explainGroup, sentences = open ? explainGroup(r.code) : [];
+    return `<button type="button" class="rk" data-g="${r.code}" aria-expanded="${!!open}" ${open && sentences.length ? 'aria-controls="rk-panel"' : ""} ${isPar ? 'aria-current="true"' : ""}>
       <span class="rk__name">${esc(r.name)}</span><span class="rk__val ${r.cls || ""}" aria-label="${esc(r.label)}">${esc(r.val)}</span>
-      <span class="rk__bar" aria-hidden="true">${r.bar.mode === "div" ? "<u></u>" : ""}<i style="${fill}"></i>${bench}</span>${r.sub ? `<span class="rk__sub">${esc(r.sub)}</span>` : ""}</button>`;
+      <span class="rk__bar" aria-hidden="true">${r.bar.mode === "div" ? "<u></u>" : ""}<i style="${fill}"></i>${bench}</span>${r.sub ? `<span class="rk__sub">${esc(r.sub)}</span>` : ""}</button>${sentences.length ? `<div class="rk-panel" id="rk-panel" role="region" aria-label="${esc(r.name)}, in plain words">${sentences.map((t) => `<p>${t}</p>`).join("")}</div>` : ""}`;
   }).join("");
 }
 function wireRank() {
+  // Escape closes the open group panel and clears the selection; focus stays on the row
+  $("rank").addEventListener("keydown", (ev) => {
+    const b = ev.target.closest(".rk"); if (ev.key !== "Escape" || !b || sel.type !== "group") return;
+    ev.preventDefault(); setSel({ type: "all", id: "" }); document.querySelector(`.rk[data-g="${b.dataset.g}"]`)?.focus();
+  });
   $("rank").addEventListener("click", (ev) => { const b = ev.target.closest(".rk"); if (b) { setSel(sel.type === "group" && sel.id === b.dataset.g ? { type: "all", id: "" } : { type: "group", id: b.dataset.g }); document.querySelector(`.rk[data-g="${b.dataset.g}"]`)?.focus(); } });
 }
 /* A sortable table. cols: [{ k, label, num, val(row) for sorting, html(row) for the cell }]; the first column holds the occupation button. */

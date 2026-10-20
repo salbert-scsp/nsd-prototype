@@ -2,7 +2,7 @@
 <title>Evolving occupations | National Skills Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="assets/nsd.css">
 <meta name="robots" content="noindex, nofollow">
 </head>
@@ -62,6 +62,18 @@ function methodNote(e) {
 /* ---------- the rank list: all 22 groups by job change since 2019 ---------- */
 const ORDER = GROUPS.slice().sort((a, b) => b.j19 - a.j19), HALF = Math.ceil(Math.max(...GROUPS.map((g) => Math.abs(g.j19))) / 5) * 5;
 const rankRows = () => ORDER.map((g) => ({ code: g.code, name: short(g), val: pct(g.j19), cls: chg(g.j19), label: `${g.j19 < 0 ? "down" : "up"} ${Math.abs(g.j19)} percent since 2019`, bar: { mode: "div", v: g.j19, max: HALF }, bench: ALLJ }));
+/* The plain-language panel under the selected group: jobs, pay and projection come from the group and occupation rows, with the page's own rounding and bands. */
+const jobsWord = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1) + " million" : fmt.format(Math.round(n / 1000) * 1000));
+setExplain((code) => {
+  const g = GBY[code], nm = esc(short(g)), mem = OCC.filter((o) => o.g === code), cmp = comparable(mem), n = cmp.length, nd = dagger(mem), by = (b) => cmp.filter((o) => band(o.r19) === b).length;
+  const move = g.j19 === 0 ? "unchanged" : `${g.j19 > 0 ? "up" : "down"} ${N(Math.abs(g.j19).toFixed(1) + "%")}`, all = ALLJ === 0 ? "were unchanged" : `${ALLJ > 0 ? "grew" : "shrank"} ${N(Math.abs(ALLJ).toFixed(1) + "%")}`;
+  const pay = n === 0 ? `None of its occupations has comparable 2019 pay data.` : n === 1 ? `Its one occupation with comparable 2019 pay data ${by("ahead") ? "beat the cost of living" : by("even") ? "kept pace with the cost of living" : "fell behind the cost of living"}.`
+    : `Of its ${N(n)} occupations with comparable 2019 pay data, ${N(by("ahead"))} beat the cost of living, ${N(by("even"))} kept pace and ${N(by("behind"))} fell behind.`;
+  return [`${nm} had about ${N(jobsWord(g.emp[0]))} jobs in May 2019 and ${N(jobsWord(g.emp[3]))} in May 2025, ${move}. All occupations ${all} over the same period.`, pay,
+    ...(g.proj ? [`BLS projects its jobs to ${rnd1(g.proj.pct) < 0 ? "shrink" : "grow"} by ${N(Math.abs(rnd1(g.proj.pct)).toFixed(1) + "%")} from 2025 to 2035.`] : []),
+    ...(nd ? [`${N(nd)} of its occupations ${nd === 1 ? "wasn’t" : "weren’t"} counted separately in 2019, so ${nd === 1 ? "it isn’t" : "they aren’t"} included in the 2019 comparison.`] : []),
+    `A bar to the right means jobs grew and a bar to the left means they shrank. The dark tick marks all occupations (${N(pct(ALLJ))}).`];
+});
 $("rank-note").textContent = `Jobs since May 2019 in each of the 22 groups of occupations. The dark tick marks all occupations, ${pct(ALLJ)}. Source: BLS OEWS major-group rows, May 2019 (MB3 research estimate) and 2025.`;
 
 /* ---------- the chart: projected jobs (x) against pay after inflation (y), every occupation with comparable 2019 data ---------- */

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Re-apply the site-only changes to the pages copied from prototype-view. Safe to run repeatedly.
+"""Re-apply the site-only changes to the pages copied from prototype-scsp-view. Safe to run repeatedly.
 
 - noindex/nofollow meta on every HTML page
 """
