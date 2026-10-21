@@ -115,6 +115,7 @@ function drawExposure(Wd) {
 
 /* ---------- sections: closed, each ending in one plain source line ---------- */
 const secOcc = addSection("Occupations and their exposure", ""), secCorner = addSection("The high-exposure, below-median-pay group", ""), secDw = addSection("Displaced workers, January 2026", `${DW.long_tenured_displaced_millions} million workers (BLS)`);
+setGroupSection(secOcc);
 secOcc.body.innerHTML = `<div id="occ-tbl"></div>`;
 const exCols = [
   { k: "name", label: "Occupation", val: (o) => o.t.toLowerCase(), html: (o) => `<button type="button" class="linkish" data-pick="${o.soc}">${esc(o.t)}</button><div class="soc">${o.soc}</div>` },

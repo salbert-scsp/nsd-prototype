@@ -156,13 +156,13 @@ const syncFeatured = () => document.querySelectorAll(".chip-btn").forEach((b) =>
 /* One visible way back: shown whenever a group, field or occupation is selected. */
 function mountReset(root) {
   root.innerHTML = `<button type="button" class="reset-btn" hidden><span aria-hidden="true">×</span> <span class="reset-btn__t"></span></button>`;
-  root.querySelector("button").addEventListener("click", () => { setSel({ type: "all", id: "" }); $("q-s1")?.focus(); });
+  root.querySelector("button").addEventListener("click", () => { setSel({ type: "all", id: "" }); followGroup(); $("q-s1")?.focus(); });
 }
 const syncReset = () => { const b = document.querySelector(".reset-btn"); if (!b) return; b.hidden = sel.type === "all"; b.querySelector(".reset-btn__t").textContent = sel.type === "all" ? "" : `Clear “${entityOf(sel).short}” and show all occupations`; };
 
 /* ---------- the same page on every tab ---------- */
 const TABS = [{ id: "emerging", href: "emerging.html", label: "Emerging titles & skills", short: "Emerging" }, { id: "evolving", href: "evolving.html", label: "Evolving occupations", short: "Evolving" }, { id: "exposure", href: "exposure.html", label: "Exposure & transitions", short: "Exposure" }];
-const syncTabs = () => document.querySelectorAll(".mast__nav a").forEach((a) => { a.href = TABS.find((t) => t.id === a.dataset.tab).href + hashOf(sel); });   // the selection travels with you
+const syncTabs = () => document.querySelectorAll(".mast__nav a").forEach((a) => { a.href = TABS.find((t) => t.id === a.dataset.tab).href; });   // the tabs are plain links: a selection stays on the page it was made on
 const EYEBROWS = { emerging: { chart: "New tasks, by year" }, evolving: { chart: "Jobs and pay, by occupation" }, exposure: { chart: "Exposure and pay, by occupation" } };
 /* Two-tone headline: the first number (with its "up" or "down") is wrapped in a mark so the stylesheet can color it. Text is untouched. */
 const KEY_NUMBER = /(?:(?:up|down) )?[−+-]?\d+(?:,\d{3})*(?:\.\d+)?%?/g, BARE_YEAR = /^(?:19|20)\d\d$/;   // a bare year is not the key number
@@ -225,6 +225,10 @@ const srcLine = (s) => `<p class="note">Source: ${s}</p>`;
 let explainGroup = null;
 const setExplain = (fn) => { explainGroup = fn; };
 const N = (x) => `<span class="n">${x}</span>`;
+/* Each page names its occupation-list section: setGroupSection(secOcc). A click on a group opens it, un-selecting the group (same row, Escape, the Clear link) closes it; nothing else opens or closes it. */
+let groupSection = null;
+const setGroupSection = (sec) => { groupSection = sec.el; };
+const followGroup = () => { if (groupSection) groupSection.open = sel.type === "group"; };
 /* The rank list is the group selector. rows: [{ code, name, val, cls, label, bar: { mode: "div" | "lin", v, max }, bench, sub }] already sorted. */
 function renderRank(rows, e) {
   $("rank").innerHTML = rows.map((r) => {
@@ -242,9 +246,9 @@ function wireRank() {
   // Escape closes the open group panel and clears the selection; focus stays on the row
   $("rank").addEventListener("keydown", (ev) => {
     const b = ev.target.closest(".rk"); if (ev.key !== "Escape" || !b || sel.type !== "group") return;
-    ev.preventDefault(); setSel({ type: "all", id: "" }); document.querySelector(`.rk[data-g="${b.dataset.g}"]`)?.focus();
+    ev.preventDefault(); setSel({ type: "all", id: "" }); followGroup(); document.querySelector(`.rk[data-g="${b.dataset.g}"]`)?.focus();
   });
-  $("rank").addEventListener("click", (ev) => { const b = ev.target.closest(".rk"); if (b) { setSel(sel.type === "group" && sel.id === b.dataset.g ? { type: "all", id: "" } : { type: "group", id: b.dataset.g }); document.querySelector(`.rk[data-g="${b.dataset.g}"]`)?.focus(); } });
+  $("rank").addEventListener("click", (ev) => { const b = ev.target.closest(".rk"); if (b) { setSel(sel.type === "group" && sel.id === b.dataset.g ? { type: "all", id: "" } : { type: "group", id: b.dataset.g }); followGroup(); document.querySelector(`.rk[data-g="${b.dataset.g}"]`)?.focus(); } });
 }
 /* A sortable table. cols: [{ k, label, num, val(row) for sorting, html(row) for the cell }]; the first column holds the occupation button. */
 function dataTable(box, spec) {

@@ -126,6 +126,7 @@ function drawYears(Wd) {
 
 /* ---------- sections: closed, each ending in one plain source line ---------- */
 const secOccs = addSection("Occupations with emerging tasks", ""), secTasks = addSection("Emerging tasks", ""), secWave = addSection("The drone wave of May 2025", "");
+setGroupSection(secOccs);
 secTasks.body.innerHTML = `<div class="filters"><div><label for="src-f">Identified by</label><select id="src-f" class="sel-select"><option value="">Everyone</option><option value="Incumbent">Workers in the job</option><option value="Occupational Expert">Occupational experts</option><option value="AI/SME">AI-assisted, expert reviewed</option></select></div><div class="count-note" id="task-count"></div></div><div id="task-list"></div>`;
 function paintTasks() {
   if (!current) return;
@@ -186,7 +187,7 @@ function render(e) {
   const all = tasksOf(e), listing = listOf(e);
   $("chart-note").textContent = `${e.type === "all" ? "" : "Highlighted: " + (e.type === "occ" ? e.name : e.short) + ". "}Each bar is the emerging tasks O*NET recorded that year; the striped part of the ${monthName(WAVE_MONTH).split(" ")[1]} bar, more than half of it, is one batch update, when O*NET added drone tasks to ${WAVE.length} occupations at once, not a trend. The last year is partial. Source: ${SRC_TASKS}.`;
   secTasks.setSummary(`${plural(all.length, "task")}`);
-  tableOccs = listing.filter((o) => TASKS.some((t) => t.soc === o.soc)); secOccs.setSummary(`${tableOccs.length} of ${listing.length} occupations`); tablePaint();
+  tableOccs = listing.filter((o) => TASKS.some((t) => t.soc === o.soc)); secOccs.setSummary(`${tableOccs.length} of ${listing.length} occupations (all years)`); tablePaint();
   paintTasks(); paintWave(e); redraw();
   if (!first) fadeIn(["headline", "plate"]);
 }

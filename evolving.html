@@ -140,6 +140,7 @@ function readout(e) {
 
 /* ---------- sections: closed, each ending in one plain source line ---------- */
 const secOcc = addSection("Every occupation", ""), secTasks = addSection("New tasks recorded", "");
+setGroupSection(secOcc);
 secOcc.body.innerHTML = `<div class="tools"><div class="seg" role="group" aria-label="Compare with"><button type="button" data-base="19" aria-pressed="true">Since May 2019</button><button type="button" data-base="21" aria-pressed="false">Since May 2021</button></div></div><div id="occ-tbl"></div>`;
 const since = () => (base === "19" ? "2019" : "2021"), jobsOf = (o) => (base === "19" ? o.j19 : o.j21), payOf = (o) => (base === "19" ? o.r19 : o.r21);
 tablePaint = dataTable($("occ-tbl"), {
