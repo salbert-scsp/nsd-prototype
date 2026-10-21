@@ -125,7 +125,7 @@ function drawYears(Wd) {
 }
 
 /* ---------- sections: closed, each ending in one plain source line ---------- */
-const secTasks = addSection("Emerging tasks", ""), secWave = addSection("The drone wave of May 2025", ""), secOccs = addSection("Occupations with emerging tasks", "");
+const secOccs = addSection("Occupations with emerging tasks", ""), secTasks = addSection("Emerging tasks", ""), secWave = addSection("The drone wave of May 2025", "");
 secTasks.body.innerHTML = `<div class="filters"><div><label for="src-f">Identified by</label><select id="src-f" class="sel-select"><option value="">Everyone</option><option value="Incumbent">Workers in the job</option><option value="Occupational Expert">Occupational experts</option><option value="AI/SME">AI-assisted, expert reviewed</option></select></div><div class="count-note" id="task-count"></div></div><div id="task-list"></div>`;
 function paintTasks() {
   if (!current) return;
