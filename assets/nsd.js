@@ -54,7 +54,9 @@ function selFromHash() {
   return (s.type === "group" && GBY[s.id]) || (s.type === "featured" && FBY[s.id]) || (s.type === "occ" && OBY[s.id]) ? s : { type: "all", id: "" };
 }
 let onSelect = () => {};
+let occReturn = null;   // the group the reader was in when they picked an occupation; the card's close button goes back to it
 function setSel(s, quiet) {
+  if (s.type !== "occ") occReturn = null; else if (sel.type !== "occ") occReturn = sel.type === "group" ? sel : null;
   sel = s; try { history.replaceState(null, "", hashOf(s) || location.pathname); } catch (e) {}
   if (!quiet) $("live").textContent = `Showing ${entityOf(s).name}.`;
   onSelect(entityOf(s));
@@ -64,6 +66,14 @@ const fadeIn = (ids) => ids.forEach((id) => { const el = $(id); if (!el) return;
 const listOf = (e) => (e.type === "occ" ? OCC.filter((o) => o.g === e.o.g) : e.members);
 const inSel = (e, o) => e.type === "all" || (e.type === "group" && o.g === e.id) || (e.type === "featured" && e.members.includes(o)) || (e.type === "occ" && o.soc === e.id);
 
+/* The occupation card: a round close button in its corner. Closing goes back to the group the reader came from, or to all occupations. */
+const cardX = (name) => `<button type="button" class="card-x" data-close aria-label="Close ${esc(name)}"><span aria-hidden="true">×</span></button>`;
+function closeCard() {
+  if (sel.type !== "occ") return;
+  const soc = sel.id; setSel(occReturn || { type: "all", id: "" });
+  const back = [...document.querySelectorAll(`[data-pick="${soc}"]`)].find((b) => b.offsetParent !== null && (!b.closest("details") || b.closest("details").open)), top = $("headline");
+  if (back) back.focus(); else { top.setAttribute("tabindex", "-1"); top.focus(); }
+}
 /* ---------- tooltips: any mark with data-t / data-v / data-s ---------- */
 function moveTip(ev) { const tip = $("tip"), w = tip.offsetWidth, h = tip.offsetHeight; let x = ev.clientX + 14, y = ev.clientY + 14; if (x + w > innerWidth - 8) x = ev.clientX - w - 14; if (y + h > innerHeight - 8) y = ev.clientY - h - 14; tip.style.left = Math.max(8, x) + "px"; tip.style.top = Math.max(8, y) + "px"; }
 function showTip(html, ev) { const tip = $("tip"); tip.innerHTML = html; tip.hidden = false; moveTip(ev); }
@@ -81,7 +91,7 @@ document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") { hideTi
 function kbChart(box, label, opts = {}) {
   box.setAttribute("tabindex", "0"); box.setAttribute("role", "group"); box.setAttribute("aria-label", label); box.setAttribute("aria-describedby", "kb-help");
   let i = -1;
-  const marks = () => { const m = [...box.querySelectorAll("[data-t]")]; if (opts.sortByX) m.sort((a, b) => { const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); return (ra.x - rb.x) || (ra.y - rb.y); }); return m; };
+  const marks = () => { const m = [...box.querySelectorAll("[data-t]")].filter((x) => !x.closest("[hidden]")); if (opts.sortByX) m.sort((a, b) => { const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); return (ra.x - rb.x) || (ra.y - rb.y); }); return m; };
   const show = (m, n) => {
     if (!m.length) return; i = Math.max(0, Math.min(m.length - 1, n));
     clearKb(); const el = m[i]; el.classList.add("kb-on"); kbUntil = performance.now() + 400;
@@ -204,8 +214,26 @@ function mountShell(cfg) {
   <div class="tip" id="tip" hidden></div>
   <div id="live" class="sr" role="status" aria-live="polite"></div>
   <p id="kb-help" class="sr">Use the arrow keys to move between values, Home and End to jump, Page Up and Page Down to skip ten, Enter to pick one where that is offered, and Escape to close the tooltip.</p>`);
+  $("readout").addEventListener("click", (ev) => { if (ev.target.closest("[data-close]")) closeCard(); });
+  $("readout").addEventListener("keydown", (ev) => { if (ev.key === "Escape" && sel.type === "occ") { ev.preventDefault(); closeCard(); } });
   mountHeadlineMark($("headline"));
-  mountSearch($("s1"), "Find any occupation or group"); mountReset($("reset"));   // the Featured chips were removed from the page; fields stay reachable through search
+  mountSearch($("s1"), "Find any occupation or group"); mountReset($("reset")); stickHeader();   // the Featured chips were removed from the page; fields stay reachable through search
+}
+/* The header sticks to the top. Once the page scrolls it gets a shadow; once the scroll passes the height it can save, it switches to a compact size,
+   and a margin keeps the content where it was, so nothing jumps. */
+function stickHeader() {
+  const m = document.querySelector(".mast"); if (!m) return;
+  let diff = 0;
+  const measure = () => { m.classList.remove("is-compact"); m.style.marginBottom = ""; const full = m.offsetHeight; m.classList.add("is-compact"); diff = full - m.offsetHeight; m.classList.remove("is-compact"); };
+  const apply = () => {
+    const y = scrollY;
+    m.classList.toggle("is-scrolled", y > 2);
+    const compact = diff > 0 && y >= diff;
+    if (compact !== m.classList.contains("is-compact")) { m.classList.toggle("is-compact", compact); m.style.marginBottom = compact ? diff + "px" : ""; }
+  };
+  addEventListener("scroll", apply, { passive: true });
+  addEventListener("resize", () => { measure(); apply(); }); addEventListener("load", () => { measure(); apply(); });
+  measure(); apply();
 }
 /* A closed section with one plain source line at its end. Returns { body, setSummary }. */
 function addSection(title, summary) {
@@ -219,6 +247,13 @@ function addComing(summary) {
   const d = document.createElement("details"); d.className = "coming";
   d.innerHTML = `<summary><span class="sum__t">Coming with new data</span><span class="sample-tag">Sample</span><span class="sum__s">${esc(summary)}</span></summary><div class="body"></div>`;
   $("coming").appendChild(d); return { el: d, body: d.querySelector(".body") };
+}
+/* The opening section above the two columns: { h, sub, tiles: [{ n, label, red, long }], note }. Text arrives already escaped; numbers are computed by the page. */
+function mountHero(o) {
+  document.querySelector(".layout").insertAdjacentHTML("beforebegin", `<section class="hero" aria-labelledby="hero-h"><div class="hero__in">
+    <h2 class="hero__h" id="hero-h">${o.h}</h2>
+    <p class="hero__sub">${o.sub}</p>
+    <dl class="hero__tiles">${o.tiles.map((t) => `<div class="hero__tile${t.red ? " hero__tile--red" : ""}${t.long ? " hero__tile--long" : ""}${typeof t.long === "string" ? " hero__tile--" + t.long : ""}"><dt>${t.label}</dt><dd>${t.n}</dd></div>`).join("\n      ")}</dl>${o.note ? `<p class="hero__note">${o.note}</p>` : ""}</div></section>`);
 }
 const srcLine = (s) => `<p class="note">Source: ${s}</p>`;
 /* Each page may set a plain-language explanation for a selected group: setExplain((code) => [sentence, ...]). Numbers go in N() so they set in mono. */
@@ -251,15 +286,29 @@ function wireRank() {
   $("rank").addEventListener("click", (ev) => { const b = ev.target.closest(".rk"); if (b) { setSel(sel.type === "group" && sel.id === b.dataset.g ? { type: "all", id: "" } : { type: "group", id: b.dataset.g }); followGroup(); document.querySelector(`.rk[data-g="${b.dataset.g}"]`)?.focus(); } });
 }
 /* A sortable table. cols: [{ k, label, num, val(row) for sorting, html(row) for the cell }]; the first column holds the occupation button. */
+const CAP = 5;
+/* Long lists start short: the first CAP items, then a plain "Show all N" / "Show fewer" button after `after`. Re-rendering the list starts it short again. */
+function capList(items, after, noun) {
+  const old = after.nextElementSibling; if (old && old.classList.contains("more")) old.remove();
+  const els = [...items]; if (els.length <= CAP) return;
+  let all = false;
+  const b = document.createElement("button"); b.type = "button"; b.className = "more";
+  const paint = () => { els.forEach((el, i) => { el.hidden = !all && i >= CAP; }); b.textContent = all ? "Show fewer" : `Show all ${els.length}${noun ? " " + noun : ""}`; b.setAttribute("aria-expanded", String(all)); };
+  b.addEventListener("click", () => { all = !all; paint(); if (!all) b.scrollIntoView({ block: "nearest" }); });
+  paint(); after.after(b);
+}
+/* A sortable table. cols: [{ k, label, num, val(row) for sorting, html(row) for the cell }]; the first column holds the occupation button. Shows CAP rows until "Show all"; a new selection starts short again. */
 function dataTable(box, spec) {
-  const st = { sort: spec.sort, dir: spec.dir || -1, all: false };
+  const st = { sort: spec.sort, dir: spec.dir || -1, all: false, sel: null };
   const paint = () => {
+    const key = sel.type === "occ" ? "#g=" + OBY[sel.id].g : hashOf(sel); if (key !== st.sel) { st.sel = key; st.all = false; }
     const col = spec.cols.find((c) => c.k === st.sort), rows = spec.rows().slice().sort((x, y) => { const a = col.val(x), b = col.val(y); if (a === null || a === undefined) return 1; if (b === null || b === undefined) return -1; return (a < b ? -1 : a > b ? 1 : 0) * st.dir; });
-    const shown = st.all ? rows : rows.slice(0, spec.limit || 12), focusK = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.sort : null;
-    box.innerHTML = `<div class="tbl" tabindex="0" role="region" aria-label="${esc(spec.label)}"><table><thead><tr>${spec.cols.map((c) => `<th class="${c.num ? "n" : ""}" aria-sort="${st.sort === c.k ? (st.dir > 0 ? "ascending" : "descending") : "none"}"><button type="button" data-sort="${c.k}">${typeof c.label === "function" ? c.label() : c.label}</button></th>`).join("")}</tr></thead>
+    const shown = st.all ? rows : rows.slice(0, CAP), had = document.activeElement, focusK = had && had.dataset ? had.dataset.sort : null, focusMore = had && had.matches && had.matches("[data-more]") && box.contains(had);
+    box.innerHTML = `<div class="tbl${spec.cls ? " " + spec.cls : ""}" tabindex="0" role="region" aria-label="${esc(spec.label)}"><table><thead><tr>${spec.cols.map((c) => `<th class="${c.num ? "n" : ""}" aria-sort="${st.sort === c.k ? (st.dir > 0 ? "ascending" : "descending") : "none"}"><button type="button" data-sort="${c.k}">${typeof c.label === "function" ? c.label() : c.label}</button></th>`).join("")}</tr></thead>
       <tbody>${shown.map((r) => `<tr>${spec.cols.map((c) => `<td class="${c.num ? "n" : ""}">${c.html(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
-      ${rows.length > (spec.limit || 12) ? `<button type="button" class="more" data-more>${st.all ? `Show the ${spec.limit || 12} largest` : `Show all ${rows.length}`}</button>` : ""}${spec.note ? spec.note() : ""}`;
+      ${rows.length > CAP ? `<button type="button" class="more" data-more aria-expanded="${st.all}">${st.all ? "Show fewer" : `Show all ${rows.length}`}</button>` : ""}${spec.note ? spec.note() : ""}`;
     if (focusK) box.querySelector(`[data-sort="${focusK}"]`)?.focus();
+    if (focusMore) { const m = box.querySelector("[data-more]"); m?.focus(); if (!st.all) m?.scrollIntoView({ block: "nearest" }); }
   };
   box.addEventListener("click", (ev) => {
     const s = ev.target.closest("[data-sort]"), m = ev.target.closest("[data-more]"), p = ev.target.closest("[data-pick]");
@@ -273,6 +322,6 @@ const pickBtn = (o) => `<button type="button" class="linkish" data-pick="${o.soc
 /* Start a page: wire the selection, then render once. */
 function startPage(render) {
   onSelect = (e) => { syncTabs(); syncFeatured(); syncReset(); render(e); };
-  addEventListener("hashchange", () => { const s = selFromHash(); if (hashOf(s) !== hashOf(sel)) { sel = s; onSelect(entityOf(s)); } });
+  addEventListener("hashchange", () => { const s = selFromHash(); if (hashOf(s) !== hashOf(sel)) { sel = s; occReturn = null; onSelect(entityOf(s)); } });
   sel = selFromHash(); onSelect(entityOf(sel));
 }

@@ -61,6 +61,15 @@ function methodNote(e) {
 
 /* ---------- the rank list: all 22 groups by job change since 2019 ---------- */
 const ORDER = GROUPS.slice().sort((a, b) => b.j19 - a.j19), HALF = Math.ceil(Math.max(...GROUPS.map((g) => Math.abs(g.j19))) / 5) * 5;
+/* ---------- the opening section: the same numbers as the headline and the pay line below ---------- */
+{
+  const list = comparable(OCC), behind = list.filter((o) => band(o.r19) === "behind").length;
+  const hi = GROUPS.reduce((a, b) => (b.j19 > a.j19 ? b : a)), lo = GROUPS.reduce((a, b) => (b.j19 < a.j19 ? b : a));
+  mountHero({ h: "America added jobs. A third of occupations lost ground on pay.",
+    sub: `Jobs ${ALLJ >= 0 ? "grew" : "shrank"} ${Math.abs(ALLJ).toFixed(1)}% since 2019, but in ${behind} of ${list.length} occupations, pay fell behind the cost of living.`,
+    tiles: [{ n: pct(ALLJ), label: "jobs since May 2019" }, { n: `${behind} <span>of ${list.length}</span>`, label: `occupations where pay fell behind the cost of living (by more than ${TOL}%)`, red: true },
+      { n: `${pct(hi.j19)} <span>vs.</span> ${pct(lo.j19)}`, label: `${lcAll(short(hi))} vs. ${lcAll(short(lo))} jobs since 2019`, long: "longer" }] });
+}
 const rankRows = () => ORDER.map((g) => ({ code: g.code, name: short(g), val: pct(g.j19), cls: chg(g.j19), label: `${g.j19 < 0 ? "down" : "up"} ${Math.abs(g.j19)} percent since 2019`, bar: { mode: "div", v: g.j19, max: HALF }, bench: ALLJ }));
 /* The plain-language panel under the selected group: jobs, pay and projection come from the group and occupation rows, with the page's own rounding and bands. */
 const jobsWord = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1) + " million" : fmt.format(Math.round(n / 1000) * 1000));
@@ -128,7 +137,7 @@ function readout(e) {
   const box = $("readout");
   if (e.type !== "occ") { box.innerHTML = `<p class="note">Select a dot, or move to it with the arrow keys and press Enter, to see that occupation’s jobs, pay and tools. Or search for any occupation.</p>`; return; }
   const o = e.o, b21 = !o.own19, j = b21 ? o.j21 : o.j19, r = b21 ? o.r21 : o.r19, since = b21 ? "2021" : "2019", tools = o.dev.concat(o.aug);
-  box.innerHTML = `<div class="readout__h"><b>${esc(o.t)}</b><span class="soc">${o.soc} · ${esc(short(o.grp))}${b21 ? " · † no 2019 figure" : ""}</span></div>
+  box.innerHTML = `${cardX(o.t)}<div class="readout__h"><b>${esc(o.t)}</b><span class="soc">${o.soc} · ${esc(short(o.grp))}${b21 ? " · † no 2019 figure" : ""}</span></div>
     <dl class="kv"><div><dt>Jobs, 2025</dt><dd>${fmt.format(o.emp[3])}</dd></div>
       <div><dt>Jobs since ${since}</dt><dd>${j === null ? "—" : `<span class="${chg(j)}">${pct(j)}</span>`}</dd></div>
       <div><dt>Median pay, 2025</dt><dd>${o.w[3] ? usd.format(o.w[3]) : "—"}</dd></div>
@@ -144,7 +153,7 @@ setGroupSection(secOcc);
 secOcc.body.innerHTML = `<div class="tools"><div class="seg" role="group" aria-label="Compare with"><button type="button" data-base="19" aria-pressed="true">Since May 2019</button><button type="button" data-base="21" aria-pressed="false">Since May 2021</button></div></div><div id="occ-tbl"></div>`;
 const since = () => (base === "19" ? "2019" : "2021"), jobsOf = (o) => (base === "19" ? o.j19 : o.j21), payOf = (o) => (base === "19" ? o.r19 : o.r21);
 tablePaint = dataTable($("occ-tbl"), {
-  label: "Occupations table", sort: "emp", rows: () => tableList,
+  label: "Occupations table", cls: "tbl--occ", sort: "emp", rows: () => tableList,
   cols: [
     { k: "name", label: "Occupation", val: (o) => o.t.toLowerCase(), html: (o) => `<button type="button" class="linkish" data-pick="${o.soc}">${esc(o.t)}</button><div class="soc">${o.soc}${base === "19" && !o.own19 ? ' · <span class="dag">† no 2019 figure</span>' : ""}</div>` },
     { k: "emp", label: "Jobs, 2025", num: true, val: (o) => o.emp[3], html: (o) => fmt.format(o.emp[3]) },
@@ -201,7 +210,7 @@ function render(e) {
   $("chart-note").textContent = `${e.type === "occ" && !e.o.own19 ? `${e.name} is not plotted: BLS has no own 2019 figure for it (†). ` : e.type === "all" ? "" : "Highlighted: " + (e.type === "occ" ? e.name : e.short) + ". "}Dot size shows jobs in 2025. The shaded band is about even with prices (within ±${TOL}%). ${nd} of ${OCC.length} occupations are not plotted: BLS has no own 2019 figure for them (†), so they are never counted. Search for one, or choose “Since May 2021” in the table. Sources: ${SRC_JOBS}; BLS CPI-U annual averages; BLS Employment Projections, 2025–35. Pay is ahead or behind prices only beyond ±${TOL}%.`;
   secOcc.setTitle(e.type === "all" ? "Every occupation" : `Occupations in ${lcAll(e.type === "occ" ? short(e.o.grp) : e.short)}`);
   secOcc.setSummary(`${list.length} occupations${dagger(list) ? `, ${dagger(list)} with no 2019 figure (†)` : ""}`);
-  secTasks.setSummary(tasksFor(list).length ? `${tasksFor(list).length} since ${recent}` : `none since ${recent}`); secTasks.body.innerHTML = tasksHtml(list);
+  secTasks.setSummary(tasksFor(list).length ? `${tasksFor(list).length} since ${recent}` : `none since ${recent}`); secTasks.body.innerHTML = tasksHtml(list); const tl = secTasks.body.querySelector(".tasklist"); if (tl) capList(tl.querySelectorAll(".task"), tl);
   if (e.type === "occ" && !e.o.own19) { base = "21"; secOcc.body.querySelectorAll("[data-base]").forEach((x) => x.setAttribute("aria-pressed", x.dataset.base === base)); }
   tableList = list; tablePaint();
   $("sd-key").innerHTML = e.type === "featured" ? SAMPLE_SKILLS[e.id].map(([n], j) => `<span style="display:inline-flex;align-items:center;gap:8px;margin-right:18px;font-size:14px"><svg width="30" height="4" viewBox="0 0 30 4" aria-hidden="true" style="--f:var(--mark)"><line class="sd-line sd-s${j + 1}" x1="0" y1="2" x2="30" y2="2"/></svg>${esc(n)}</span>`).join("") : "";

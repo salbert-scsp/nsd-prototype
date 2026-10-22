@@ -60,6 +60,17 @@ function methodNote() {
 
 /* ---------- the rank list: groups by average exposure percentile, weighted by jobs ---------- */
 const ORDER = GROUPS.filter((g) => GST[g.code].w !== null).sort((a, b) => GST[b.code].w - GST[a.code].w);
+/* ---------- the opening section: the same numbers as the headline and the panels below ---------- */
+{
+  const ft = DW.full_time_reemployed_earning_as_much_or_more_pct, latest = ft[Object.keys(ft).sort().pop()];
+  const hi = ORDER[0], lo = ORDER[ORDER.length - 1];
+  mountHero({ h: "9 million workers do work AI overlaps with, for below-median pay.",
+    sub: "And when long-time workers lose a job, only about half who find full-time work earn as much as before.",
+    tiles: [{ n: (jobsOf(CORNER) / 1e6).toFixed(1) + "M", label: "workers in high-AI-overlap, below-median-pay occupations", red: true },
+      { n: latest + "%", label: "of re-employed full-time workers earning as much as before or more (BLS Displaced Worker Survey)" },
+      { n: `${Math.round(GST[hi.code].w)} <span>vs.</span> ${Math.round(GST[lo.code].w)}`, label: `average AI overlap score, ${lcAll(short(hi))} vs. ${lcAll(short(lo))} work`, long: true }],
+    note: `${DOES_NOT} The two figures are separate measures; neither says AI caused a layoff.` });
+}
 const rankRows = () => ORDER.map((g) => { const s = GST[g.code]; return { code: g.code, name: short(g), val: String(Math.round(s.w)), label: `average exposure percentile ${Math.round(s.w)}`, bar: { mode: "lin", v: s.w, max: 100 }, bench: ALL_W, sub: s.cornerJobs ? `${fmtM(s.cornerJobs)} workers in the corner` : "" }; });
 /* The plain-language panel under the selected group: scores, counts and corner workers come from GST, the same rounding as the row. */
 setExplain((code) => {
@@ -132,8 +143,9 @@ const cornerRows = GROUPS.filter((g) => GST[g.code].cornerJobs > 0).sort((a, b) 
 function paintCorner(e) {
   const parent = e.type === "occ" ? e.o.g : e.type === "group" ? e.id : null;
   $("corner-bars").innerHTML = cornerRows.map((g) => `<div class="bar${g.code === parent ? " bar--sel" : ""}"${tipData(short(g), `${fmtM(GST[g.code].cornerJobs)} workers in ${GST[g.code].corner.length} occupations`, "Sources: " + SRC_EXPOSURE)}><span>${esc(short(g))}</span><div class="bar__track"><div class="bar__fill" style="width:${GST[g.code].cornerJobs / cmax * 100}%"></div></div><span class="bar__v">${fmtM(GST[g.code].cornerJobs).replace(" million", "M")}</span></div>`).join("");
+  capList($("corner-bars").querySelectorAll(".bar"), $("corner-bars"));
 }
-cornerPaint = dataTable($("corner-tbl"), { label: "Occupations in the corner", sort: "emp", rows: () => CORNER, cols: exCols.filter((c) => c.k !== "corner"), limit: 10,
+cornerPaint = dataTable($("corner-tbl"), { label: "Occupations in the corner", sort: "emp", rows: () => CORNER, cols: exCols.filter((c) => c.k !== "corner"),
   note: () => srcLine(`${SRC_EXPOSURE}. Only occupations with a score and a published 2025 median pay are counted.`) });
 cornerPaint(); kbChart($("corner-bars"), "Workers in the corner, by group");
 secDw.body.innerHTML = (() => {
@@ -165,7 +177,7 @@ function readout(e) {
   const box = $("readout");
   if (e.type !== "occ") { box.innerHTML = `<p class="note">Select a dot, or move to it with the arrow keys and press Enter, to see that occupation’s exposure and pay. Or search for any occupation.</p>`; return; }
   const o = e.o, tools = o.dev.concat(o.aug);
-  box.innerHTML = `<div class="readout__h"><b>${esc(o.t)}</b><span class="soc">${o.soc} · ${esc(short(o.grp))}</span></div>
+  box.innerHTML = `${cardX(o.t)}<div class="readout__h"><b>${esc(o.t)}</b><span class="soc">${o.soc} · ${esc(short(o.grp))}</span></div>
     <dl class="kv"><div><dt>Exposure percentile</dt><dd>${o.exp === null ? "no score" : Math.round(o.exp)}</dd></div><div><dt>Median pay, 2025</dt><dd>${o.w[3] ? usd.format(o.w[3]) : "—"}</dd></div><div><dt>Jobs, 2025</dt><dd>${fmt.format(o.emp[3])}</dd></div>
       <div><dt>In the high-exposure, below-median-pay group</dt><dd>${inCorner(o) ? "Yes" : "No"}</dd></div></dl>
     <p class="note">${tools.length ? "AI tools among its in-demand tools: " + tools.map(esc).join(", ") + "." : "None of its in-demand tools has a verified AI feature."} Exposure is overlap with the work, not job loss. Sources: ${SRC_EXPOSURE}; O*NET 31.0.</p>`;
@@ -178,7 +190,7 @@ function render(e) {
   $("chart-note").textContent = `${e.type === "all" ? "" : "Highlighted: " + (e.type === "occ" ? e.name : e.short) + ". "}Each dot is an occupation; size shows jobs in 2025. The shaded corner is the high-exposure, below-median-pay group. ${plotted} of ${OCC.length} occupations are plotted; the rest have no score or no published pay. Exposure is overlap with the work, not job loss. Sources: ${SRC_EXPOSURE}.`;
   secOcc.setTitle(e.type === "all" ? "Every occupation" : `Occupations in ${lcAll(e.type === "occ" ? short(e.o.grp) : e.short)}`);
   secOcc.setSummary(`${list.length} occupations, ${scored(list).length} with a score`);
-  tableList = list; tablePaint(); paintCorner(e); redraw();
+  tableList = list; tablePaint(); paintCorner(e); cornerPaint(); redraw();
   if (!first) fadeIn(["headline", "plate"]);
 }
 redraw = responsive($("chart"), drawExposure);
