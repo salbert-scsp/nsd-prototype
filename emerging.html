@@ -54,33 +54,19 @@ const GSTAT = Object.fromEntries(GROUPS.map((g) => { const m = OCC.filter((o) =>
 
 /* ---------- sentences, filled from the data; they describe what O*NET recorded, nothing more ---------- */
 const aiLine = (all, whole) => { const m = aiMentions(all), a = aiAssisted(all), of = whole ? `the ${all.length}` : all.length === 1 ? "its" : `its ${all.length}`; return `${m === 0 ? "None" : "Only " + m} of ${of} ${all.length === 1 && !whole ? "task" : "tasks"} ${m === 0 ? "describes" : "mention"} AI${m === 0 ? " work" : ""}${a ? `; ${a} ${a === 1 ? "was" : "were"} identified with AI assistance and reviewed by experts` : ""}.`; };
-function leadSentence(e) {
-  const all = tasksOf(e), rec = all.filter(isRecent);
-  if (e.type === "all") return `O*NET has recorded ${fmt.format(all.length)} emerging tasks, ${fmt.format(rec.length)} of them since ${RECENT}.`;
-  if (e.type === "occ") return all.length === 0 ? `O*NET has recorded no emerging tasks for ${esc(lcAll(e.o.t))}.` : `O*NET has recorded ${plural(all.length, "emerging task")} for ${esc(lcAll(e.o.t))}${rec.length === all.length ? "" : `, ${rec.length} of them since ${RECENT}`}.`;
-  const nm = e.type === "group" ? short(e.g) : e.name;
-  return rec.length === 0 ? `${esc(nm)} has no emerging task since ${RECENT}.` : `${esc(nm)} has ${plural(rec.length, "emerging task")} since ${RECENT}, ${Math.round(rec.length / TASKS.filter(isRecent).length * 100)}% of the ${fmt.format(TASKS.filter(isRecent).length)} recorded.`;
-}
-function subLine(e) {
-  const all = tasksOf(e), rec = all.filter(isRecent), w = all.filter(isWave);
-  if (e.type === "all") return `In ${monthName(WAVE_MONTH)} it added drone and uncrewed-vehicle tasks to ${WAVE.length} occupations in ${waveGroups.size} groups at once.`;
-  if (e.type === "occ") {
-    if (!all.length) return "That can mean it has not been re-surveyed yet, not that nothing changed.";
-    const last = all.slice().sort((a, b) => (a.when < b.when ? 1 : -1))[0];
-    return `The latest is dated ${monthName(last.when)}.${w.length ? ` It is one of the ${WAVE.length} occupations that got a drone or uncrewed-vehicle task in ${monthName(WAVE_MONTH)}.` : ""}`;
-  }
-  const m = e.members.length, k = touched(e.members);
-  if (!rec.length) return "That reflects O*NET’s rolling update schedule, not the absence of change.";
-  return `They reach ${k} of its ${m} occupations${w.length ? `; ${w.length} ${w.length === 1 ? "is" : "are"} from the ${monthName(WAVE_MONTH)} drone wave` : ""}.`;
-}
-function contextLine(e) {
-  const all = tasksOf(e);
-  if (e.type === "occ") { const gs = GSTAT[e.o.g], g = esc(lcAll(short(e.o.grp))); return gs.n === 0 ? `Its group, ${g}, has no emerging task since ${RECENT}.` : `Its group, ${g}, has ${plural(gs.n, "emerging task")} since ${RECENT} across ${gs.k} of its ${gs.m} occupations.`; }
-  if (!all.length) return "O*NET has recorded no emerging task for these occupations in any year.";
-  return `${aiLine(all, e.type === "all")}${e.type === "all" ? ` ${fmt.format(ALL_TOUCHED)} of ${fmt.format(OCC.length)} occupations have a new task since ${RECENT}.` : ""}`;
+/* The opening text: a plain question, then what O*NET recorded since 2024 for the selection. Every number is computed; "Not one involves AI" turns into "Only N involve AI" if a task ever matches the AI rule. */
+const HEADLINE = "What are American workers doing that isn\u2019t in their job descriptions yet?";
+const DRONE_EX = TASKS.some((t) => isRecent(t) && /drone/i.test(t.text) && /high-voltage|power line/i.test(t.text));   // the power-line example is only used while a recorded task backs it
+const aiClause = (n, ai) => (ai === 0 ? (n === 1 ? "It does not involve AI." : "Not one involves AI.") : ai === n ? (n === 1 ? "It involves AI." : `All ${fmt.format(n)} involve AI.`) : `Only ${fmt.format(ai)} involve${ai === 1 ? "s" : ""} AI.`);
+function leadText(e) {
+  const rec = tasksOf(e).filter(isRecent), n = rec.length, since = `Since ${RECENT}, the Department of Labor has recorded`, ai = aiClause(n, aiMentions(rec)), notYet = "That can mean O*NET has not re-surveyed them yet, not that nothing changed.";
+  if (e.type === "occ") return n === 0 ? `${since} no new tasks for ${esc(lcAll(e.o.t))}. ${notYet.replace("them", "it")}` : `${since} ${plural(n, "new task")} for ${esc(lcAll(e.o.t))}. ${ai}`;
+  if (e.type === "all") return `${since} ${plural(n, "new task")} across ${fmt.format(ALL_TOUCHED)} of ${fmt.format(OCC.length)} occupations${DRONE_EX ? ", from using drones to inspect power lines to new kinds of hands-on work" : ""}. ${ai}`;
+  const nm = esc(e.type === "group" ? short(e.g) : e.name), m = e.members.length;
+  return n === 0 ? `${since} no new tasks in ${nm} ${m === 1 ? "occupation" : "occupations"}. ${notYet}` : `${since} ${plural(n, "new task")} across ${fmt.format(touched(e.members))} of ${fmt.format(m)} ${nm} ${m === 1 ? "occupation" : "occupations"}. ${ai}`;
 }
 function methodNote() {
-  return `<strong>What this counts.</strong> O*NET’s Emerging Tasks file lists tasks found in occupations that are not yet in its task lists. Counts reflect O*NET’s rolling update schedule, not the amount of change: O*NET re-surveys each occupation every few years, so an occupation with no new task may simply not have been re-surveyed yet. Tasks are not jobs, and a task recorded is not a measure of how many workers do it. ${unmatched} of the ${TASKS.length} tasks sit in O*NET occupations that OEWS combines with others; they count in group totals but not in occupation lists. These are the tasks O*NET has recorded; new job titles in postings arrive with NLx data. The job-postings panel is separate: it uses Indeed Hiring Lab’s AI tracker, the share of US job postings that use AI-related terms. It covers the whole US, not individual occupations.`;
+  return `<strong>What this counts.</strong> O*NET’s Emerging Tasks file lists tasks found in occupations that are not yet in its task lists. Counts reflect O*NET’s rolling update schedule, not the amount of change: O*NET re-surveys each occupation every few years, so an occupation with no new task may simply not have been re-surveyed yet. Tasks are not jobs, and a task recorded is not a measure of how many workers do it. O*NET has recorded ${fmt.format(TASKS.length)} emerging tasks in all, ${fmt.format(TASKS.filter(isRecent).length)} of them since ${RECENT}. In ${monthName(WAVE_MONTH)} it added drone and uncrewed-vehicle tasks to ${WAVE.length} occupations in ${waveGroups.size} groups at once. ${aiLine(TASKS, true)} ${unmatched} of the ${TASKS.length} tasks sit in O*NET occupations that OEWS combines with others; they count in group totals but not in occupation lists. These are the tasks O*NET has recorded; new job titles in postings arrive with NLx data. The job-postings panel is separate: it uses Indeed Hiring Lab’s AI tracker, the share of US job postings that use AI-related terms. It covers the whole US, not individual occupations.`;
 }
 
 /* ---------- the rank list: groups by the share of their occupations with a new task since 2024 ---------- */
@@ -232,7 +218,7 @@ function readout(e) {
 }
 function render(e) {
   const first = !current; current = e;
-  $("headline").innerHTML = leadSentence(e); $("subline").innerHTML = subLine(e); $("context").innerHTML = contextLine(e); $("method").innerHTML = methodNote();
+  $("headline").textContent = HEADLINE; $("subline").innerHTML = leadText(e); $("context").hidden = true; $("method").innerHTML = methodNote();
   renderRank(rankRows(), e); readout(e);
   const all = tasksOf(e), listing = listOf(e);
   $("chart-note").textContent = `${e.type === "all" ? "" : "Highlighted: " + (e.type === "occ" ? e.name : e.short) + ". "}Each bar is the emerging tasks O*NET recorded that year; the striped part of the ${monthName(WAVE_MONTH).split(" ")[1]} bar, more than half of it, is one batch update, when O*NET added drone tasks to ${WAVE.length} occupations at once, not a trend. The last year is partial. Source: ${SRC_TASKS}.`;
