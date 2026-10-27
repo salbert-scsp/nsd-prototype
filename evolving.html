@@ -166,7 +166,9 @@ tablePaint = dataTable($("occ-tbl"), {
 });
 secOcc.body.querySelector(".seg").addEventListener("click", (ev) => { const b = ev.target.closest("[data-base]"); if (!b) return; base = b.dataset.base; secOcc.body.querySelectorAll("[data-base]").forEach((x) => x.setAttribute("aria-pressed", x === b)); tablePaint(); });
 $("occ-tbl").addEventListener("click", (ev) => { if (ev.target.closest("[data-pick]")) window.scrollTo({ top: 0, behavior: "smooth" }); });
-const recent = W.settings.recent_tasks_from, tasksFor = (list) => { const codes = new Set(list.map((o) => o.soc)); return W.emerging_tasks.filter((t) => +t[4].slice(0, 4) >= recent && codes.has(t[0])); };
+/* O*NET codes that BLS publishes only inside a combined occupation (same mapping as the Emerging page). */
+const TO_BLS = { "21-1014": "21-1018", "29-2011": "29-2010", "29-2012": "29-2010", "31-1121": "31-1120", "31-1122": "31-1120" };
+const recent = W.settings.recent_tasks_from, tasksFor = (list) => { const codes = new Set(list.map((o) => o.soc)); const all = list.length === OCC.length; return W.emerging_tasks.filter((t) => +t[4].slice(0, 4) >= recent && (all || codes.has(TO_BLS[t[0]] || t[0]))); };
 function tasksHtml(list) {
   const tasks = tasksFor(list);
   return (tasks.length ? `<div class="tasklist" tabindex="0" role="region" aria-label="New tasks list">${tasks.map((t) => `<div class="task"><div class="task__d">${t[4]}</div><div>${esc(t[3])}<div class="task__o">${esc(t[1])}</div></div></div>`).join("")}</div>`
