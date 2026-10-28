@@ -68,7 +68,7 @@ function leadText(e) {
   return n === 0 ? `${since} no new tasks in ${nm} ${m === 1 ? "occupation" : "occupations"}. ${notYet}` : `${since} ${plural(n, "new task")} across ${fmt.format(touched(e.members))} of ${fmt.format(m)} ${nm} ${m === 1 ? "occupation" : "occupations"}. ${ai}`;
 }
 function methodNote() {
-  return `<strong>What this counts.</strong> O*NET’s Emerging Tasks file lists tasks found in occupations that are not yet in its task lists. Counts reflect O*NET’s rolling update schedule, not the amount of change: O*NET re-surveys each occupation every few years, so an occupation with no new task may simply not have been re-surveyed yet. Tasks are not jobs, and a task recorded is not a measure of how many workers do it. O*NET has recorded ${fmt.format(TASKS.length)} emerging tasks in all, ${fmt.format(TASKS.filter(isRecent).length)} of them since ${RECENT}. In ${monthName(WAVE_MONTH)} it added drone and uncrewed-vehicle tasks to ${WAVE.length} occupations in ${waveGroups.size} groups at once. ${aiLine(TASKS, true)} ${unmatched === 1 ? "One of the " + TASKS.length + " tasks belongs to an occupation BLS doesn’t publish pay or job estimates for (" + esc(TASKS.find((t) => !t.occ).title) + "); it counts in totals but not in occupation lists." : unmatched + " of the " + TASKS.length + " tasks belong to occupations BLS doesn’t publish separately; they count in totals but not in occupation lists."} These are the tasks O*NET has recorded; new job titles in postings arrive with NLx data. The job-postings panel is separate: it uses Indeed Hiring Lab’s AI tracker, the share of US job postings that use AI-related terms. It covers the whole US, not individual occupations.`;
+  return `<strong>What this counts.</strong> O*NET’s Emerging Tasks file lists tasks found in occupations that are not yet in its task lists. Counts reflect O*NET’s rolling update schedule, not the amount of change: O*NET re-surveys each occupation every few years, so an occupation with no new task may simply not have been re-surveyed yet. Tasks are not jobs, and a task recorded is not a measure of how many workers do it. O*NET has recorded ${fmt.format(TASKS.length)} emerging tasks in all, ${fmt.format(TASKS.filter(isRecent).length)} of them since ${RECENT}. In ${monthName(WAVE_MONTH)} it added drone and uncrewed-vehicle tasks to ${WAVE.length} occupations in ${waveGroups.size} groups at once. ${aiLine(TASKS, true)} ${unmatched === 1 ? "One of the " + TASKS.length + " tasks belongs to an occupation BLS doesn’t publish pay or job estimates for (" + esc(TASKS.find((t) => !t.occ).title) + "); it counts in totals but not in occupation lists." : unmatched + " of the " + TASKS.length + " tasks belong to occupations BLS doesn’t publish separately; they count in totals but not in occupation lists."} These are the tasks O*NET has recorded; new job titles in postings arrive with NLx data. The job-postings section is separate: it uses Indeed Hiring Lab’s AI tracker, the share of US job postings that include AI keywords (Indeed’s definition; these can name tools a job uses, not only AI work). It covers the whole US, not individual occupations, and is a text match on postings, not a count of tasks, so the two figures are not directly comparable.`;
 }
 
 /* ---------- the rank list: groups by the share of their occupations with a new task since 2024 ---------- */
@@ -89,23 +89,9 @@ $("rank-note").textContent = `Share of each group’s occupations with at least 
 const IND = JSON.parse($("indeed-data").textContent), INDM = IND.months, INDV = IND.us_share_pct;
 const indLast = INDM.length - 1, indLatest = INDM[indLast], indThen = (+indLatest.slice(0, 4) - 2) + indLatest.slice(4), indThenI = INDM.indexOf(indThen);
 const p1 = (v) => v.toFixed(1) + "%";
-{
-  const nAI = aiMentions(TASKS), upFrom = indThenI >= 0 ? `(${INDV[indLast] >= INDV[indThenI] ? "up" : "down"} from ${p1(INDV[indThenI])} in ${monthName(indThen)})` : "";
-  $("plate").insertAdjacentHTML("beforeend", `<div class="cmp"><p class="eyebrow">What job postings show</p>
-    <p class="cmp__off">Official records: <b class="n">${nAI}</b> new ${nAI === 1 ? "task mentions" : "tasks mention"} AI.</p>
-    <div class="cmp__row"><p class="cmp__posts">Job postings: <b class="cmp__big">${p1(INDV[indLast])}</b> use AI-related terms${upFrom ? ` <span class="cmp__from">${upFrom}</span>` : ""}</p><div class="spark" id="spark"></div></div>
-    <p class="cmp__src">Source: Indeed Hiring Lab, AI tracker (CC BY 4.0), data through ${monthName(indLatest)}. National data; doesn’t change with group selection. Reformatted by SCSP.</p></div>`);
-}
-function drawSpark() {
-  const box = $("spark"), Wd = 120, H = 32, n = INDM.length, max = Math.max(...INDV), pad = 4;
-  const X = (i) => pad + (Wd - 2 * pad) * i / (n - 1), Yv = (v) => pad + (H - 2 * pad) * (1 - v / max);
-  const s = svgEl("svg", { viewBox: `0 0 ${Wd} ${H}`, width: Wd, height: H, role: "img", "aria-label": `US share of job postings with AI-related terms by month, ${monthName(INDM[0])} to ${monthName(indLatest)}; latest ${p1(INDV[indLast])}` }, box);
-  svgEl("polyline", { points: INDV.map((v, i) => `${X(i).toFixed(1)},${Yv(v).toFixed(1)}`).join(" "), fill: "none", stroke: css("--mark"), "stroke-width": 1.5, "stroke-linejoin": "round" }, s);
-  svgEl("circle", { cx: X(indLast), cy: Yv(INDV[indLast]), r: 3, fill: css("--brand"), stroke: css("--surface"), "stroke-width": 1.5 }, s);
-  const bw = (Wd - 2 * pad) / (n - 1);
-  INDM.forEach((m, i) => { const hit = svgEl("rect", { x: X(i) - bw / 2, y: 0, width: bw, height: H, fill: "transparent", class: "hit" }, s); setTip(hit, monthName(m), `${p1(INDV[i])} of US job postings used AI-related terms`, "Source: Indeed Hiring Lab, AI tracker (CC BY 4.0)"); });
-}
-drawSpark(); kbChart($("spark"), "US share of job postings with AI-related terms, by month", { sortByX: true });
+const upFrom = indThenI >= 0 ? `${INDV[indLast] >= INDV[indThenI] ? "up" : "down"} from ${p1(INDV[indThenI])} in ${monthName(indThen)}` : "";
+/* A one-line pointer in the chart card; the postings data itself lives in its own section below, so it is not read as a like-for-like comparison with O*NET tasks. */
+$("plate").insertAdjacentHTML("beforeend", `<div class="cmp"><p class="cmp__off">Job postings show AI appearing faster than official records: <button type="button" class="linkish" id="to-postings">see “What job postings show” below</button>.</p></div>`);
 
 /* ---------- the chart: tasks recorded each year, the selection against everything else ---------- */
 function drawYears(Wd) {
@@ -152,6 +138,30 @@ function drawYears(Wd) {
 
 /* ---------- sections: closed, each ending in one plain source line ---------- */
 const secOccs = addSection("Occupations with emerging tasks", ""), secTasks = addSection("Emerging tasks", ""), secWave = addSection("The drone wave of May 2025", "");
+/* ---------- job postings: Indeed's national series, its own section; national only, so it does not change with the selection ---------- */
+const secPost = addSection("What job postings show", `${p1(INDV[indLast])} of US postings mention AI keywords`);
+secPost.body.innerHTML = `<p>Share of all US job postings on Indeed that mention AI keywords, by month. In ${monthName(indLatest)} it was <b class="n">${p1(INDV[indLast])}</b>${upFrom ? `, ${upFrom}` : ""}.</p>
+  <div class="chart" id="post-chart"></div>
+  <p class="note"><b>How this differs from the tasks above.</b> O*NET records tasks in official job descriptions; we searched their text for “AI,” “artificial intelligence,” “machine learning” and “generative” and found ${aiMentions(TASKS)}. Indeed counts postings that include AI keywords such as “machine learning,” “data science” or “ChatGPT,” which can describe tools a job uses, not only AI work. The two are different measures, so they are shown separately. <a href="https://github.com/hiring-lab/ai-tracker" target="_blank" rel="noopener">Indeed’s definition</a>.</p>
+  ${srcLine(`Indeed Hiring Lab, AI tracker (CC BY 4.0), data through ${monthName(indLatest)}; monthly average of Indeed’s daily 7-day figures. National data; doesn’t change with group selection. Reformatted by SCSP.`)}`;
+function drawPostings(Wd) {
+  const box = $("post-chart"); box.innerHTML = "";
+  const narrow = Wd < 520, H = narrow ? 200 : 240, L = 40, R = 14, T = 12, B = 28, n = INDM.length, top = Math.ceil(Math.max(...INDV)), step = top > 6 ? 2 : 1;
+  const X = (i) => L + (Wd - L - R) * i / (n - 1), Yv = (v) => T + (H - T - B) * (1 - v / top);
+  const s = svgEl("svg", { viewBox: `0 0 ${Wd} ${H}`, width: Wd, height: H, role: "img", "aria-label": `US share of job postings mentioning AI keywords by month, ${monthName(INDM[0])} to ${monthName(indLatest)}; latest ${p1(INDV[indLast])}` }, box);
+  const g = svgEl("g", { class: "grid" }, s);
+  for (let v = 0; v <= top; v += step) { svgEl("line", { x1: L, x2: Wd - R, y1: Yv(v), y2: Yv(v) }, g); txt(s, L - 6, Yv(v) + 4, v + "%", { "text-anchor": "end" }); }
+  INDM.forEach((m, i) => { const y = +m.slice(0, 4); if (m.endsWith("-01") && (!narrow || y % 2 === 1)) txt(s, X(i), H - 8, String(y), { "text-anchor": "middle" }); });
+  svgEl("polyline", { points: INDV.map((v, i) => `${X(i).toFixed(1)},${Yv(v).toFixed(1)}`).join(" "), fill: "none", stroke: css("--mark"), "stroke-width": 2, "stroke-linejoin": "round" }, s);
+  if (indThenI >= 0) svgEl("circle", { cx: X(indThenI), cy: Yv(INDV[indThenI]), r: 3.5, fill: css("--muted") }, s);
+  svgEl("circle", { cx: X(indLast), cy: Yv(INDV[indLast]), r: 4, fill: css("--brand"), stroke: css("--surface"), "stroke-width": 1.5 }, s);
+  const bw = (Wd - L - R) / (n - 1);
+  INDM.forEach((m, i) => { const hit = svgEl("rect", { x: X(i) - bw / 2, y: T, width: bw, height: H - T - B, fill: "transparent", class: "hit" }, s); setTip(hit, monthName(m), `${p1(INDV[i])} of US job postings mentioned AI keywords`, "Source: Indeed Hiring Lab, AI tracker (CC BY 4.0)"); });
+}
+responsive($("post-chart"), drawPostings); kbChart($("post-chart"), "US share of job postings mentioning AI keywords, by month", { sortByX: true });
+$("to-postings").addEventListener("click", () => { secPost.el.open = true; secPost.el.scrollIntoView({ behavior: "smooth", block: "start" }); });
+/* This page also uses Indeed data, so the footer names it. */
+{ const f = document.querySelector(".main > .src"); if (f) f.textContent = "Everything on this page is real BLS, O*NET, AIOE or Indeed data except the section marked Sample."; }
 setGroupSection(secOccs);
 secTasks.body.innerHTML = `<div class="filters"><div><label for="src-f">Identified by</label><select id="src-f" class="sel-select"><option value="">Everyone</option><option value="Incumbent">Workers in the job</option><option value="Occupational Expert">Occupational experts</option><option value="AI/SME">AI-assisted, expert reviewed</option></select></div><div class="count-note" id="task-count"></div></div><div id="task-list"></div>`;
 function paintTasks() {
