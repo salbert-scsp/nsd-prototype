@@ -148,7 +148,23 @@ function readout(e) {
 }
 
 /* ---------- sections: closed, each ending in one plain source line ---------- */
-const secOcc = addSection("Every occupation", ""), secTasks = addSection("New tasks recorded", "");
+const DW = W.displaced_workers;
+const secOcc = addSection("Every occupation", ""), secDw = addSection("Displaced workers, January 2026", `${DW.long_tenured_displaced_millions} million workers (BLS)`), secTasks = addSection("New tasks recorded", "");
+/* ---------- displaced workers: BLS Displaced Worker Survey, national and five broad categories; does not change with the selection ---------- */
+secDw.body.innerHTML = (() => {
+  const st = DW.status_at_survey_pct, ft = DW.full_time_reemployed_earning_as_much_or_more_pct, ks = Object.keys(ft).sort(), now = ft[ks[1]], before = ft[ks[0]];
+  const mon = (ym) => new Date(ym + "-01T00:00:00Z").toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" }), src = `BLS, Worker Displacement ${DW.period_start_year}–${String(DW.period_end_year).slice(2)}`;
+  const seg = (n, v, bg, fg) => `<div style="flex:${v};background:${bg};color:${fg}"${tipData(n, `${v.toFixed(1)}% of ${DW.long_tenured_displaced_millions} million displaced workers with ${DW.tenure_years_min}+ years in the lost job`, `Source: ${src}, ${mon(DW.survey_month)}`)}>${v.toFixed(1)}%</div>`;
+  return `<p>${DW.long_tenured_displaced_millions} million workers lost jobs they had held ${DW.tenure_years_min}+ years between ${DW.period_start_year} and ${DW.period_end_year}. By ${mon(DW.survey_month)}, ${st.reemployed}% were reemployed.</p>
+    <div class="stack" id="dw-stack" role="group" aria-label="Where displaced workers stood in ${mon(DW.survey_month)}">${seg("Reemployed", st.reemployed, "var(--mark)", "var(--surface)")}${seg("Unemployed", st.unemployed, "var(--negative)", "var(--on-negative)")}${seg("Not in the labor force", st.not_in_labor_force, "var(--neutral)", "var(--on-neutral)")}</div>
+    <div class="swatches"><span><i style="--c:var(--mark)"></i>Reemployed ${st.reemployed}%</span><span><i style="--c:var(--negative)"></i>Unemployed ${st.unemployed}%</span><span><i style="--c:var(--neutral)"></i>Not in the labor force ${st.not_in_labor_force}%</span></div>
+    <div class="callout"><b>${now < 50 ? "Pay fell for most who found work." : "Most who found work earned as much as before or more."}</b> About ${now}% of reemployed full-time workers earned as much as before or more, ${now < before ? "down from" : now > before ? "up from" : "unchanged from"} about ${before}% in the ${mon(ks[0])} survey.</div>
+    <h3 style="font-family:var(--font-display);font-weight:600;font-size:21px;margin:6px 0 0">Reemployed, by occupation group of the lost job</h3>
+    <div class="bars" id="dw-bars" role="group" aria-label="Reemployment by occupation group of the lost job">${DW.reemployed_pct_by_lost_job_occupation_group.map((r) => `<div class="bar"${tipData(r.group, `${r.pct.toFixed(1)}% were reemployed by ${mon(DW.survey_month)}`, `Source: ${src}`)}><span>${esc(r.group)}</span><div class="bar__track"><div class="bar__fill" style="width:${r.pct}%;--c:var(--mark)"></div></div><span class="bar__v">${r.pct.toFixed(1)}%</span></div>`).join("")}</div>
+    <p class="note">BLS reports these figures for the whole country and by five broad occupation categories, not by our 22 groups, so this section does not change with your selection. They show where displaced workers stood, not whether AI was the cause.</p>
+    <p class="note">Source: <a href="${esc(DW.url)}" target="_blank" rel="noopener">${esc(src)}</a>, released ${new Date(DW.release_date + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}. The survey runs ${esc(DW.survey_frequency)}.</p>`;
+})();
+kbChart($("dw-stack"), "Displaced workers by status"); kbChart($("dw-bars"), "Reemployment by occupation group of the lost job");
 setGroupSection(secOcc);
 secOcc.body.innerHTML = `<div class="tools"><div class="seg" role="group" aria-label="Compare with"><button type="button" data-base="19" aria-pressed="true">Since May 2019</button><button type="button" data-base="21" aria-pressed="false">Since May 2021</button></div></div><div id="occ-tbl"></div>`;
 const since = () => (base === "19" ? "2019" : "2021"), jobsOf = (o) => (base === "19" ? o.j19 : o.j21), payOf = (o) => (base === "19" ? o.r19 : o.r21);

@@ -62,14 +62,14 @@ function methodNote() {
 const ORDER = GROUPS.filter((g) => GST[g.code].w !== null).sort((a, b) => GST[b.code].w - GST[a.code].w);
 /* ---------- the opening section: the same numbers as the headline and the panels below ---------- */
 {
-  const ft = DW.full_time_reemployed_earning_as_much_or_more_pct, latest = ft[Object.keys(ft).sort().pop()];
   const hi = ORDER[0], lo = ORDER[ORDER.length - 1];
+  const topC = GROUPS.slice().sort((a, b) => GST[b.code].cornerJobs - GST[a.code].cornerJobs)[0], topShare = Math.round(GST[topC.code].cornerJobs / jobsOf(CORNER) * 100);
   mountHero({ h: "9 million workers do work AI overlaps with, for below-median pay.",
-    sub: "And when long-time workers lose a job, only about half who find full-time work earn as much as before.",
+    sub: "AI overlaps most with higher-paid work, so most exposed workers earn above the median. These are the exceptions.",
     tiles: [{ n: (jobsOf(CORNER) / 1e6).toFixed(1) + "M", label: "workers in high-AI-overlap, below-median-pay occupations", red: true },
-      { n: latest + "%", label: "of re-employed full-time workers earning as much as before or more (BLS Displaced Worker Survey)" },
+      { n: `${CORNER.length}`, label: `occupations in that group; ${lcAll(short(topC))} accounts for ${topShare}% of its workers` },
       { n: `${Math.round(GST[hi.code].w)} <span>vs.</span> ${Math.round(GST[lo.code].w)}`, label: `average AI overlap score, ${lcAll(short(hi))} vs. ${lcAll(short(lo))} work`, long: true }],
-    note: `${DOES_NOT} The two figures are separate measures; neither says AI caused a layoff.` });
+    note: DOES_NOT });
 }
 const rankRows = () => ORDER.map((g) => { const s = GST[g.code]; return { code: g.code, name: short(g), val: String(Math.round(s.w)), label: `average exposure percentile ${Math.round(s.w)}`, bar: { mode: "lin", v: s.w, max: 100 }, bench: ALL_W, sub: s.cornerJobs ? `${fmtM(s.cornerJobs)} workers in the corner` : "" }; });
 /* The plain-language panel under the selected group: scores, counts and corner workers come from GST, the same rounding as the row. */
@@ -125,7 +125,7 @@ function drawExposure(Wd) {
 }
 
 /* ---------- sections: closed, each ending in one plain source line ---------- */
-const secOcc = addSection("Occupations and their exposure", ""), secCorner = addSection("The high-exposure, below-median-pay group", ""), secDw = addSection("Displaced workers, January 2026", `${DW.long_tenured_displaced_millions} million workers (BLS)`);
+const secOcc = addSection("Occupations and their exposure", ""), secCorner = addSection("The high-exposure, below-median-pay group", "");
 setGroupSection(secOcc);
 secOcc.body.innerHTML = `<div id="occ-tbl"></div>`;
 const exCols = [
@@ -148,21 +148,6 @@ function paintCorner(e) {
 cornerPaint = dataTable($("corner-tbl"), { label: "Occupations in the corner", sort: "emp", rows: () => CORNER, cols: exCols.filter((c) => c.k !== "corner"),
   note: () => srcLine(`${SRC_EXPOSURE}. Only occupations with a score and a published 2025 median pay are counted.`) });
 cornerPaint(); kbChart($("corner-bars"), "Workers in the corner, by group");
-secDw.body.innerHTML = (() => {
-  const st = DW.status_at_survey_pct, ft = DW.full_time_reemployed_earning_as_much_or_more_pct, ks = Object.keys(ft).sort(), now = ft[ks[1]], before = ft[ks[0]];
-  const mon = (ym) => new Date(ym + "-01T00:00:00Z").toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" }), src = `BLS, Worker Displacement ${DW.period_start_year}–${String(DW.period_end_year).slice(2)}`;
-  const seg = (n, v, bg, fg) => `<div style="flex:${v};background:${bg};color:${fg}"${tipData(n, `${v.toFixed(1)}% of ${DW.long_tenured_displaced_millions} million displaced workers with ${DW.tenure_years_min}+ years in the lost job`, `Source: ${src}, ${mon(DW.survey_month)}`)}>${v.toFixed(1)}%</div>`;
-  return `<p>${DW.long_tenured_displaced_millions} million workers lost jobs they had held ${DW.tenure_years_min}+ years between ${DW.period_start_year} and ${DW.period_end_year}. By ${mon(DW.survey_month)}, ${st.reemployed}% were reemployed.</p>
-    <div class="stack" id="dw-stack" role="group" aria-label="Where displaced workers stood in ${mon(DW.survey_month)}">${seg("Reemployed", st.reemployed, "var(--mark)", "var(--surface)")}${seg("Unemployed", st.unemployed, "var(--negative)", "var(--on-negative)")}${seg("Not in the labor force", st.not_in_labor_force, "var(--neutral)", "var(--on-neutral)")}</div>
-    <div class="swatches"><span><i style="--c:var(--mark)"></i>Reemployed ${st.reemployed}%</span><span><i style="--c:var(--negative)"></i>Unemployed ${st.unemployed}%</span><span><i style="--c:var(--neutral)"></i>Not in the labor force ${st.not_in_labor_force}%</span></div>
-    <div class="callout"><b>${now < 50 ? "Pay fell for most who found work." : "Most who found work earned as much as before or more."}</b> About ${now}% of reemployed full-time workers earned as much as before or more, ${now < before ? "down from" : now > before ? "up from" : "unchanged from"} about ${before}% in the ${mon(ks[0])} survey.</div>
-    <h3 style="font-family:var(--font-display);font-weight:600;font-size:21px;margin:6px 0 0">Reemployed, by occupation group of the lost job</h3>
-    <div class="bars" id="dw-bars" role="group" aria-label="Reemployment by occupation group of the lost job">${DW.reemployed_pct_by_lost_job_occupation_group.map((r) => `<div class="bar"${tipData(r.group, `${r.pct.toFixed(1)}% were reemployed by ${mon(DW.survey_month)}`, `Source: ${src}`)}><span>${esc(r.group)}</span><div class="bar__track"><div class="bar__fill" style="width:${r.pct}%;--c:var(--mark)"></div></div><span class="bar__v">${r.pct.toFixed(1)}%</span></div>`).join("")}</div>
-    <p class="note">BLS reports these figures for the whole country and by five broad occupation categories, not by our 22 groups, so this section does not change with your selection. They show where displaced workers stood, not whether AI was the cause.</p>
-    <p class="note">Source: <a href="${esc(DW.url)}" target="_blank" rel="noopener">${esc(src)}</a>, released ${new Date(DW.release_date + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}. The survey runs ${esc(DW.survey_frequency)}.</p>`;
-})();
-kbChart($("dw-stack"), "Displaced workers by status"); kbChart($("dw-bars"), "Reemployment by occupation group of the lost job");
-
 /* ---------- coming with new data: where workers go next (linked CPS) and the draft definition of "trapped". Invented, to show the layout. ---------- */
 const SAMPLE_NEXT = [["Same occupation", 58], ["Related occupation, similar or higher pay", 14], ["Different occupation, lower pay", 11], ["Unemployed", 7], ["Out of the labor force", 10]];
 const coming = addComing("Where workers go next, from linked Current Population Survey records");
